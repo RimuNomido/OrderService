@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -5,7 +7,10 @@ from src.api.orders import app
 
 
 @pytest.mark.asyncio
-async def test_create_order():
+async def test_create_order(order_test_data):
+    product_id = order_test_data['product_id']
+    user_id = order_test_data['user_id']
+
     transport = ASGITransport(app=app)
 
     async with AsyncClient(
@@ -15,8 +20,8 @@ async def test_create_order():
         response = await client.post(
             "/orders/create",
             json={
-                "user_id": 1,
-                "product_id": 1,
+                "user_id": user_id,
+                "product_id": product_id,
                 "quantity": 1,
             }
         )
@@ -42,5 +47,5 @@ async def test_create_order():
 
         item = order['items'][0]
 
-        assert item['product']['product_id'] == 1
+        assert item['product']['product_id'] == product_id
         assert item['quantity'] == 1

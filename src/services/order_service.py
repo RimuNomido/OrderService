@@ -1,7 +1,10 @@
+from decimal import Decimal
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from src.exceptions.order import UserNotFound, ProductNotFound, InsufficientStock, OrderNotFound
+from src.exceptions.product import ProductAlreadyExists
 from src.models import User, Product, Order, OrderItem
 
 async def create_order(session: AsyncSession, user_id: int, product_id: int, quantity: int):
@@ -62,3 +65,19 @@ async def get_product(session: AsyncSession, product_id: int) -> Product:
         return product
     else:
         raise ProductNotFound("Продукта с таким id не существует!")
+
+async def add_product(session: AsyncSession, product_name: str, price: Decimal, stock: int) -> Product:
+    try:
+        product = Product(
+            name=product_name,
+            price=price,
+            stock=stock
+        )
+        session.add(product)
+        await session.flush()
+        return product
+    except IntegrityError as e:
+        constraint_name = getattr(e.orig.driver_exception, "constraint_name", None)
+        if constraint_name == 'products_name_key':
+            raise ProductAlreadyExists("Добавляемый продукт уже существует!") from e
+        raise

@@ -8,6 +8,11 @@ class CreateOrder(BaseModel):
     product_id: int
     quantity: int = Field(gt=0)
 
+class AddProduct(BaseModel):
+    name: str
+    price: Decimal = Field(gt=0)
+    stock: int = Field(gt=0)
+
 class ProductResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

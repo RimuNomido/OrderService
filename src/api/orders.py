@@ -1,7 +1,11 @@
+from decimal import Decimal
+
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.schemas.orders import CreateOrder, OrderResponse, ProductResponse
+
+from src.exceptions.product import ProductAlreadyExists
+from src.schemas.orders import CreateOrder, OrderResponse, ProductResponse, AddProduct
 from src.db.session import get_db
 from src.services import order_service
 from src.exceptions.order import UserNotFound, ProductNotFound, InsufficientStock, OrderNotFound
@@ -48,6 +52,16 @@ async def order_not_found_handler(
         content={'detail': str(exc)},
     )
 
+@app.exception_handler(ProductAlreadyExists)
+async def product_already_exists_handler(
+        request: Request,
+        exc: ProductAlreadyExists,
+):
+    return JSONResponse(
+        status_code=409,
+        content={'detail': str(exc)},
+    )
+
 @app.post('/orders/create', status_code=201)
 async def create_order(order_data: CreateOrder, session:AsyncSession = Depends(get_db)):
     async with session.begin():
@@ -79,3 +93,16 @@ async def get_product(
         product_id: int,
         session: AsyncSession = Depends(get_db)):
     return await order_service.get_product(session, product_id)
+
+@app.post('/products/add', status_code=201, response_model=ProductResponse)
+async def add_product(
+        product_data: AddProduct,
+        session: AsyncSession = Depends(get_db)):
+    async with session.begin():
+        product = await order_service.add_product(
+            session=session,
+            product_name=product_data.name,
+            price=product_data.price,
+            stock=product_data.stock,
+        )
+        return product
